@@ -39,6 +39,18 @@ func (KeyDAO) Insert(_key Key) error {
 	return db.Create(&_key).Error
 }
 
+func (KeyDAO) Count(_space string) (int64, error) {
+	count := int64(0)
+	db, err := openSqlDB()
+	if nil != err {
+		return count, err
+	}
+	defer closeSqlDB(db)
+
+	res := db.Model(&Key{}).Where("space = ?", _space).Count(&count)
+	return count, res.Error
+}
+
 func (KeyDAO) Find(_number string) (Key, error) {
 	var key Key
 	db, err := openSqlDB()
@@ -62,4 +74,16 @@ func (KeyDAO) Save(_key *Key) error {
 	defer closeSqlDB(db)
 
 	return db.Save(_key).Error
+}
+
+func (KeyDAO) List(_offset int32, _count int32, _space string) ([]Key, error) {
+	db, err := openSqlDB()
+	if nil != err {
+		return nil, err
+	}
+	defer closeSqlDB(db)
+
+	var key []Key
+	res := db.Where("space = ?", _space).Offset(_offset).Limit(_count).Order("created_at desc").Find(&key)
+	return key, res.Error
 }

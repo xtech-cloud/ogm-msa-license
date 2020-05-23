@@ -94,13 +94,16 @@ func (this *Space) Query(_ctx context.Context, _req *proto.SpaceQueryRequest, _r
 		return nil
 	}
 
-	_rsp.SpaceKey = space.SpaceKey
-	_rsp.SpaceSecret = space.SpaceSecret
-	_rsp.PublicKey = space.PublicKey
-	_rsp.PrivateKey = space.PrivateKey
-	_rsp.Profile = space.Profile
-	_rsp.CreatedAt = space.GModel.CreatedAt.Unix()
-	_rsp.UpdatedAt = space.GModel.UpdatedAt.Unix()
+	_rsp.Space = &proto.SpaceEntity{
+		Name:        space.Name,
+		SpaceKey:    space.SpaceKey,
+		SpaceSecret: space.SpaceSecret,
+		PublicKey:   space.PublicKey,
+		PrivateKey:  space.PrivateKey,
+		Profile:     space.Profile,
+		CreatedAt:   space.GModel.CreatedAt.Unix(),
+		UpdatedAt:   space.GModel.UpdatedAt.Unix(),
+	}
 
 	return nil
 }
@@ -111,15 +114,31 @@ func (this *Space) List(_ctx context.Context, _req *proto.SpaceListRequest, _rsp
 
 	dao := model.NewSpaceDAO()
 
-	spaces, err := dao.List()
+	count, err := dao.Count()
 	// 数据库错误
 	if nil != err {
 		return err
 	}
 
-	_rsp.Name = make([]string, len(spaces))
+	spaces, err := dao.List(_req.Offset, _req.Count)
+	// 数据库错误
+	if nil != err {
+		return err
+	}
+
+	_rsp.Total = count
+	_rsp.Space = make([]*proto.SpaceEntity, len(spaces))
 	for i, space := range spaces {
-		_rsp.Name[i] = space.Name
+		_rsp.Space[i] = &proto.SpaceEntity{
+			Name:        space.Name,
+			SpaceKey:    space.SpaceKey,
+			SpaceSecret: space.SpaceSecret,
+			PublicKey:   space.PublicKey,
+			PrivateKey:  space.PrivateKey,
+			Profile:     space.Profile,
+			CreatedAt:   space.GModel.CreatedAt.Unix(),
+			UpdatedAt:   space.GModel.UpdatedAt.Unix(),
+		}
 	}
 	return nil
 }

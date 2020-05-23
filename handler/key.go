@@ -26,15 +26,9 @@ func (this *Key) Generate(_ctx context.Context, _req *proto.KeyGenerateRequest, 
 	logger.Infof("Received Key.Generate, request is %v", _req)
 	_rsp.Status = &proto.Status{}
 
-	if "" == _req.SpaceKey {
+	if "" == _req.Space {
 		_rsp.Status.Code = 1
-		_rsp.Status.Message = "spaceKey is required"
-		return nil
-	}
-
-	if "" == _req.SpaceSecret {
-		_rsp.Status.Code = 1
-		_rsp.Status.Message = "spaceSecret is required"
+		_rsp.Status.Message = "space is required"
 		return nil
 	}
 
@@ -56,7 +50,7 @@ func (this *Key) Generate(_ctx context.Context, _req *proto.KeyGenerateRequest, 
 	daoSpace := model.NewSpaceDAO()
 	daoKey := model.NewKeyDAO()
 
-	space, err := daoSpace.Fetch(_req.SpaceKey, _req.SpaceSecret)
+	space, err := daoSpace.Find(_req.Space)
 	if nil != err {
 		return err
 	}
@@ -115,18 +109,95 @@ func (this *Key) Query(_ctx context.Context, _req *proto.KeyQueryRequest, _rsp *
 		return nil
 	}
 
-	_rsp.Space = key.Space
-	_rsp.Capacity = key.Capacity
-	_rsp.Expiry = key.Expiry
-	_rsp.Storage = key.Storage
-	_rsp.Profile = key.Profile
-	_rsp.Ban = key.Ban
-	_rsp.CreatedAt = key.GModel.CreatedAt.Unix()
-	_rsp.UpdatedAt = key.GModel.UpdatedAt.Unix()
-	_rsp.ActivatedAt = key.ActivatedAt.Unix()
-	if _rsp.ActivatedAt < _rsp.CreatedAt {
-		_rsp.ActivatedAt = 0
+	_rsp.Key = &proto.KeyEntity{
+		Number:      key.Number,
+		Space:       key.Space,
+		Capacity:    key.Capacity,
+		Expiry:      key.Expiry,
+		Storage:     key.Storage,
+		Profile:     key.Profile,
+		Ban:         key.Ban,
+		CreatedAt:   key.GModel.CreatedAt.Unix(),
+		UpdatedAt:   key.GModel.UpdatedAt.Unix(),
+		ActivatedAt: key.ActivatedAt.Unix(),
 	}
+	if _rsp.Key.ActivatedAt < _rsp.Key.CreatedAt {
+		_rsp.Key.ActivatedAt = 0
+	}
+
+	daoCer := model.NewCertificateDAO()
+	// 获取已激活的证书
+	cers, err := daoCer.Query(model.CertificateQuery{
+		Space: key.Space,
+		Key:   key.Number,
+	})
+	if nil != err {
+		return err
+	}
+	_rsp.Key.Consumer = make([]string, len(cers))
+	for i, key := range cers {
+		_rsp.Key.Consumer[i] = key.Consumer
+	}
+	return nil
+}
+
+func (this *Key) List(_ctx context.Context, _req *proto.KeyListRequest, _rsp *proto.KeyListResponse) error {
+	logger.Infof("Received Key.List, request is %v", _req)
+	_rsp.Status = &proto.Status{}
+
+	if "" == _req.Space {
+		_rsp.Status.Code = 1
+		_rsp.Status.Message = "space is required"
+		return nil
+	}
+
+	dao := model.NewKeyDAO()
+
+	count, err := dao.Count(_req.Space)
+	// 数据库错误
+	if nil != err {
+		return err
+	}
+
+	keys, err := dao.List(_req.Offset, _req.Count, _req.Space)
+	// 数据库错误
+	if nil != err {
+		return err
+	}
+
+	daoCer := model.NewCertificateDAO()
+	_rsp.Total = count
+	_rsp.Key = make([]*proto.KeyEntity, len(keys))
+	for i, key := range keys {
+		_rsp.Key[i] = &proto.KeyEntity{
+			Number:      key.Number,
+			Space:       key.Space,
+			Capacity:    key.Capacity,
+			Expiry:      key.Expiry,
+			Storage:     key.Storage,
+			Profile:     key.Profile,
+			Ban:         key.Ban,
+			CreatedAt:   key.GModel.CreatedAt.Unix(),
+			UpdatedAt:   key.GModel.UpdatedAt.Unix(),
+			ActivatedAt: key.ActivatedAt.Unix(),
+		}
+		if _rsp.Key[i].ActivatedAt < _rsp.Key[i].CreatedAt {
+			_rsp.Key[i].ActivatedAt = 0
+		}
+		// 获取已激活的消费者
+		consumers, err := daoCer.Query(model.CertificateQuery{
+			Space: key.Space,
+			Key:   key.Number,
+		})
+		if nil != err {
+			continue
+		}
+		_rsp.Key[i].Consumer = make([]string, len(consumers))
+		for j, c := range consumers {
+			_rsp.Key[i].Consumer[j] = c.Consumer
+		}
+	}
+
 	return nil
 }
 
@@ -199,7 +270,7 @@ func (this *Key) Activate(_ctx context.Context, _req *proto.KeyActivateRequest, 
 		return nil
 	}
 
-	// 获取已激活的次数
+	// 获取已激活的数量
 	count, err := daoCer.Count(model.CertificateQuery{
 		Space: _req.Space,
 		Key:   _req.Number,
@@ -235,6 +306,11 @@ func (this *Key) Activate(_ctx context.Context, _req *proto.KeyActivateRequest, 
 		return err
 	}
 
+	if key.ActivatedAt.Unix() < key.GModel.CreatedAt.Unix() {
+		key.ActivatedAt = time.Now()
+	}
+	daoKey.Save(&key)
+
 	_rsp.CerUID = newCer.UID
 	_rsp.CerContent = newCer.Content
 	return nil
@@ -244,15 +320,9 @@ func (this *Key) Suspend(_ctx context.Context, _req *proto.KeySuspendRequest, _r
 	logger.Infof("Received Key.Suspend, request is %v", _req)
 	_rsp.Status = &proto.Status{}
 
-	if "" == _req.SpaceKey {
+	if "" == _req.Space {
 		_rsp.Status.Code = 1
-		_rsp.Status.Message = "spaceKey is required"
-		return nil
-	}
-
-	if "" == _req.SpaceSecret {
-		_rsp.Status.Code = 1
-		_rsp.Status.Message = "spaceSecret is required"
+		_rsp.Status.Message = "space is required"
 		return nil
 	}
 
@@ -293,7 +363,7 @@ func newNumber() (string, error) {
 	id := uuid.NewV4()
 	h := md5.New()
 	h.Write(id.Bytes())
-	return hex.EncodeToString(h.Sum(nil)), nil
+	return strings.ToUpper(hex.EncodeToString(h.Sum(nil))), nil
 }
 
 func makeCertificate(_spaceKey string, _spaceSecret string, _consumer string, _storage string, _expiry int32, _publicKey string, _privateKey string) (string, error) {

@@ -72,6 +72,18 @@ func (SpaceDAO) Find(_name string) (Space, error) {
 	return space, err
 }
 
+func (SpaceDAO) Count() (int64, error) {
+	count := int64(0)
+	db, err := openSqlDB()
+	if nil != err {
+		return count, err
+	}
+	defer closeSqlDB(db)
+
+	res := db.Model(&Space{}).Count(&count)
+	return count, res.Error
+}
+
 func (SpaceDAO) Fetch(_key string, _secret string) (Space, error) {
 	var space Space
 	db, err := openSqlDB()
@@ -87,7 +99,7 @@ func (SpaceDAO) Fetch(_key string, _secret string) (Space, error) {
 	return space, err
 }
 
-func (SpaceDAO) List() ([]Space, error) {
+func (SpaceDAO) List(_offset int32, _count int32) ([]Space, error) {
 	db, err := openSqlDB()
 	if nil != err {
 		return nil, err
@@ -95,6 +107,6 @@ func (SpaceDAO) List() ([]Space, error) {
 	defer closeSqlDB(db)
 
 	var space []Space
-	res := db.Find(&space)
+	res := db.Offset(_offset).Limit(_count).Order("created_at desc").Find(&space)
 	return space, res.Error
 }

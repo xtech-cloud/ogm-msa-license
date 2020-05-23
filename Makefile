@@ -38,19 +38,13 @@ call:
 	# 查询不存在的空间
 	MICRO_REGISTRY=consul micro call omo.msa.license Space.Query '{"name":"test-1"}'
 	# 列举空间
-	MICRO_REGISTRY=consul micro call omo.msa.license Space.List '{}'
-	# 缺少必须的参数
-	MICRO_REGISTRY=consul micro call omo.msa.license Key.Generate '{"spaceKey":"${SPACE_KEY}"}'
-	# 缺少必须的参数
-	MICRO_REGISTRY=consul micro call omo.msa.license Key.Generate '{"spaceSecret":"${SPACE_SECRET}"}'
+	MICRO_REGISTRY=consul micro call omo.msa.license Space.List '{"offset":0, "count":100}'
 	# 错误的参数
-	MICRO_REGISTRY=consul micro call omo.msa.license Key.Generate '{"spaceKey":"${SPACE_KEY}1212", "spaceSecret":"${SPACE_SECRET}"}'
-	# 错误的参数
-	MICRO_REGISTRY=consul micro call omo.msa.license Key.Generate '{"spaceKey":"${SPACE_KEY}", "spaceSecret":"${SPACE_SECRET}1212"}'
+	MICRO_REGISTRY=consul micro call omo.msa.license Key.Generate '{"space":"1212"}'
 	# 使用默认参数生成
-	MICRO_REGISTRY=consul micro call omo.msa.license Key.Generate '{"spaceKey":"${SPACE_KEY}", "spaceSecret":"${SPACE_SECRET}"}'
+	MICRO_REGISTRY=consul micro call omo.msa.license Key.Generate '{"space":"test"}'
 	# 使用指定参数生成
-	MICRO_REGISTRY=consul micro call omo.msa.license Key.Generate '{"spaceKey":"${SPACE_KEY}", "spaceSecret":"${SPACE_SECRET}", "count":3, "capacity":2,"expiry":4,"storage":"mydata","profile":"myprofile"}'
+	MICRO_REGISTRY=consul micro call omo.msa.license Key.Generate '{"space":"test", "count":3, "capacity":2,"expiry":4,"storage":"mydata","profile":"myprofile"}'
 	# 查询存在的激活码
 	MICRO_REGISTRY=consul micro call omo.msa.license Key.Query '{"number":"${NUMBER}"}'
 	# 缺少参数
@@ -66,11 +60,13 @@ call:
 	# 激活超过capacity的
 	MICRO_REGISTRY=consul micro call omo.msa.license Key.Activate '{"number":"${NUMBER}", "consumer":"44556677", "space":"test"}'
 	# 挂起证书
-	MICRO_REGISTRY=consul micro call omo.msa.license Key.Suspend '{"spaceKey":"${SPACE_KEY}", "spaceSecret":"${SPACE_SECRET}", "number":"${NUMBER}", "ban":1, "reason":"unknown"}'
+	MICRO_REGISTRY=consul micro call omo.msa.license Key.Suspend '{"space":"test", "number":"${NUMBER}", "ban":1, "reason":"unknown"}'
 	# 使用挂起的证书激活
 	MICRO_REGISTRY=consul micro call omo.msa.license Key.Activate '{"number":"${NUMBER}", "consumer":"223344", "space":"test"}'
 	# 恢复挂起的证书
-	MICRO_REGISTRY=consul micro call omo.msa.license Key.Suspend '{"spaceKey":"${SPACE_KEY}", "spaceSecret":"${SPACE_SECRET}", "number":"${NUMBER}", "ban":0, "reason":"unknown"}'
+	MICRO_REGISTRY=consul micro call omo.msa.license Key.Suspend '{"space":"test", "number":"${NUMBER}", "ban":0, "reason":"unknown"}'
+	# 列举激活码
+	MICRO_REGISTRY=consul micro call omo.msa.license Key.List '{"offset":0, "count":100, "space": "test"}'
 
 .PHONY: tcall
 tcall:

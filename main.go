@@ -36,7 +36,7 @@ func main() {
 	// Register Handler
 	proto.RegisterSpaceHandler(service.Server(), new(handler.Space))
 	proto.RegisterKeyHandler(service.Server(), new(handler.Key))
-	//proto.RegisterCertificateHandler(service.Server(), new(handler.Auth))
+	proto.RegisterCertificateHandler(service.Server(), new(handler.Certificate))
 
 	app, _ := filepath.Abs(os.Args[0])
 

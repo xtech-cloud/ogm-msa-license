@@ -86,8 +86,8 @@ func (CertificateDAO) Query(_query CertificateQuery) ([]*Certificate, error) {
 	return cers, res.Error
 }
 
-func (CertificateDAO) Count(_query CertificateQuery) (int, error) {
-	count := 0
+func (CertificateDAO) Count(_query CertificateQuery) (int64, error) {
+	count := int64(0)
 	db, err := openSqlDB()
 	if nil != err {
 		return count, err
@@ -108,4 +108,16 @@ func (CertificateDAO) Count(_query CertificateQuery) (int, error) {
 
 	res := db.Count(&count)
 	return count, res.Error
+}
+
+func (CertificateDAO) List(_offset int32, _count int32, _space string) ([]Certificate, error) {
+	db, err := openSqlDB()
+	if nil != err {
+		return nil, err
+	}
+	defer closeSqlDB(db)
+
+	var cer []Certificate
+	res := db.Where("space = ?", _space).Offset(_offset).Limit(_count).Order("created_at desc").Find(&cer)
+	return cer, res.Error
 }
