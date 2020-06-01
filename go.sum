@@ -493,6 +493,8 @@ github.com/xtech-cloud/omo-msp-license v1.0.10 h1:H7eW0L1J9kTCBDIENaXrONSkqgOnlx
 github.com/xtech-cloud/omo-msp-license v1.0.10/go.mod h1:nwxKOMrfUgdgNaQOZcMHB3I/ydTVifiFmZt3Q0mDMk0=
 github.com/xtech-cloud/omo-msp-license v1.0.11 h1:6+J69YXyXTKNoCltkEEfu+1+9gCl6uoNgyou4zKXEa4=
 github.com/xtech-cloud/omo-msp-license v1.0.11/go.mod h1:nwxKOMrfUgdgNaQOZcMHB3I/ydTVifiFmZt3Q0mDMk0=
+github.com/xtech-cloud/omo-msp-license v1.0.12 h1:l47Fx978J+WABrIQnjsU3QJWXxuJIZOXt33wTfxMEN0=
+github.com/xtech-cloud/omo-msp-license v1.0.12/go.mod h1:nwxKOMrfUgdgNaQOZcMHB3I/ydTVifiFmZt3Q0mDMk0=
 go.etcd.io/bbolt v1.3.3/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
 go.opencensus.io v0.20.1/go.mod h1:6WKK9ahsWS3RSO+PY9ZHZUfv2irvY6gN279GOPZjmmk=
 go.opencensus.io v0.20.2/go.mod h1:6WKK9ahsWS3RSO+PY9ZHZUfv2irvY6gN279GOPZjmmk=

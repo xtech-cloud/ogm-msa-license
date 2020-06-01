@@ -63,7 +63,7 @@ func (CertificateDAO) Query(_query CertificateQuery) ([]*Certificate, error) {
 	}
 	defer closeSqlDB(db)
 
-	db = db.Model(&Certificate{})
+	db = db.Model(&Certificate{}).Order("created_at desc")
 	blankQuery := true
 	if "" != _query.Space {
 		db = db.Where("space = ?", _query.Space)
