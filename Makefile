@@ -67,6 +67,8 @@ call:
 	MICRO_REGISTRY=consul micro call omo.msa.license Key.Suspend '{"space":"test", "number":"${NUMBER}", "ban":0, "reason":"unknown"}'
 	# 列举激活码
 	MICRO_REGISTRY=consul micro call omo.msa.license Key.List '{"offset":0, "count":100, "space": "test"}'
+	# 拉取证书
+	MICRO_REGISTRY=consul micro call omo.msa.license Certificate.Pull '{"space":"test", "consumer":"223344"}'
 
 .PHONY: tcall
 tcall:

@@ -128,8 +128,8 @@ func (this *Key) Query(_ctx context.Context, _req *proto.KeyQueryRequest, _rsp *
 	daoCer := model.NewCertificateDAO()
 	// 获取已激活的证书
 	cers, err := daoCer.Query(model.CertificateQuery{
-		Space: key.Space,
-		Key:   key.Number,
+		Space:  key.Space,
+		Number: key.Number,
 	})
 	if nil != err {
 		return err
@@ -186,8 +186,8 @@ func (this *Key) List(_ctx context.Context, _req *proto.KeyListRequest, _rsp *pr
 		}
 		// 获取已激活的消费者
 		consumers, err := daoCer.Query(model.CertificateQuery{
-			Space: key.Space,
-			Key:   key.Number,
+			Space:  key.Space,
+			Number: key.Number,
 		})
 		if nil != err {
 			continue
@@ -272,8 +272,8 @@ func (this *Key) Activate(_ctx context.Context, _req *proto.KeyActivateRequest, 
 
 	// 获取已激活的数量
 	count, err := daoCer.Count(model.CertificateQuery{
-		Space: _req.Space,
-		Key:   _req.Number,
+		Space:  _req.Space,
+		Number: _req.Number,
 	})
 	if nil != err {
 		return err

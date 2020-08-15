@@ -8,7 +8,7 @@ type Certificate struct {
 	GModel   gorm.Model `gorm:"embedded"`
 	UID      string     `gorm:"column:uid;type:char(32);unique;not null"`
 	Space    string     `gorm:"column:space;type:varchar(32);not null"`
-	Key      string     `gorm:"column:key;type:char(32);not null"`
+	Key      string     `gorm:"column:number;type:char(32);not null"`
 	Consumer string     `gorm:"column:consumer;type:varchar(128);not null"`
 	Content  string     `gorm:"column:content;type:TEXT;not null"`
 }
@@ -20,7 +20,7 @@ func (Certificate) TableName() string {
 type CertificateQuery struct {
 	Space    string
 	Consumer string
-	Key      string
+	Number   string
 }
 
 type CertificateDAO struct {
@@ -73,8 +73,8 @@ func (CertificateDAO) Query(_query CertificateQuery) ([]*Certificate, error) {
 		db = db.Where("consumer = ?", _query.Consumer)
 		blankQuery = false
 	}
-	if "" != _query.Key {
-		db = db.Where("key = ?", _query.Key)
+	if "" != _query.Number {
+		db = db.Where("number = ?", _query.Number)
 		blankQuery = false
 	}
 
@@ -102,8 +102,8 @@ func (CertificateDAO) Count(_query CertificateQuery) (int64, error) {
 	if "" != _query.Consumer {
 		db = db.Where("consumer = ?", _query.Consumer)
 	}
-	if "" != _query.Key {
-		db = db.Where("key = ?", _query.Key)
+	if "" != _query.Number {
+		db = db.Where("number = ?", _query.Number)
 	}
 
 	res := db.Count(&count)
