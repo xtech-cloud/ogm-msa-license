@@ -23,8 +23,8 @@ func main() {
 
 	// New Service
 	service := micro.NewService(
-		micro.Name("omo.msa.license"),
-		micro.Version("latest"),
+		micro.Name(config.Schema.Service.Name),
+		micro.Version(BuildVersion),
 		micro.RegisterTTL(time.Second*time.Duration(config.Schema.Service.TTL)),
 		micro.RegisterInterval(time.Second*time.Duration(config.Schema.Service.Interval)),
 		micro.Address(config.Schema.Service.Address),
