@@ -34,6 +34,7 @@ func main() {
 	service.Init()
 
 	// Register Handler
+	proto.RegisterHealthyHandler(service.Server(), new(handler.Healthy))
 	proto.RegisterSpaceHandler(service.Server(), new(handler.Space))
 	proto.RegisterKeyHandler(service.Server(), new(handler.Key))
 	proto.RegisterCertificateHandler(service.Server(), new(handler.Certificate))
