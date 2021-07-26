@@ -1,4 +1,4 @@
-APP_NAME := omo-msa-license
+APP_NAME := ogm-license
 BUILD_VERSION   := $(shell git tag --contains)
 BUILD_TIME      := $(shell date "+%F %T")
 COMMIT_SHA1     := $(shell git rev-parse HEAD )
@@ -31,45 +31,45 @@ clean:
 
 .PHONY: call
 call:
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Healthy.Echo '{"msg":"hello"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Healthy.Echo '{"msg":"hello"}'
 	# 创建空间
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Space.Create '{"name":"test"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Space.Create '{"name":"test"}'
 	# 查询存在的空间
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Space.Query '{"name":"test"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Space.Query '{"name":"test"}'
 	# 查询不存在的空间
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Space.Query '{"name":"test-1"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Space.Query '{"name":"test-1"}'
 	# 列举空间
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Space.List '{"offset":0, "count":100}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Space.List '{"offset":0, "count":100}'
 	# 错误的参数
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Key.Generate '{"space":"1212"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Key.Generate '{"space":"1212"}'
 	# 使用默认参数生成
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Key.Generate '{"space":"test"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Key.Generate '{"space":"test"}'
 	# 使用指定参数生成
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Key.Generate '{"space":"test", "count":3, "capacity":2,"expiry":4,"storage":"mydata","profile":"myprofile"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Key.Generate '{"space":"test", "count":3, "capacity":2,"expiry":4,"storage":"mydata","profile":"myprofile"}'
 	# 查询存在的激活码
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Key.Query '{"number":"${NUMBER}"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Key.Query '{"number":"${NUMBER}"}'
 	# 缺少参数
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Key.Activate '{"number":"${NUMBER}", "consumer":"223344"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Key.Activate '{"number":"${NUMBER}", "consumer":"223344"}'
 	# 错误的参数
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Key.Activate '{"number":"${NUMBER}", "consumer":"223344", "space":"test2"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Key.Activate '{"number":"${NUMBER}", "consumer":"223344", "space":"test2"}'
 	# 激活
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Key.Activate '{"number":"${NUMBER}", "consumer":"223344", "space":"test"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Key.Activate '{"number":"${NUMBER}", "consumer":"223344", "space":"test"}'
 	# 激活已激活过的
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Key.Activate '{"number":"${NUMBER}", "consumer":"223344", "space":"test"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Key.Activate '{"number":"${NUMBER}", "consumer":"223344", "space":"test"}'
 	# 激活超过capacity的
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Key.Activate '{"number":"${NUMBER}", "consumer":"22334455", "space":"test"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Key.Activate '{"number":"${NUMBER}", "consumer":"22334455", "space":"test"}'
 	# 激活超过capacity的
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Key.Activate '{"number":"${NUMBER}", "consumer":"44556677", "space":"test"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Key.Activate '{"number":"${NUMBER}", "consumer":"44556677", "space":"test"}'
 	# 挂起证书
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Key.Suspend '{"space":"test", "number":"${NUMBER}", "ban":1, "reason":"unknown"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Key.Suspend '{"space":"test", "number":"${NUMBER}", "ban":1, "reason":"unknown"}'
 	# 使用挂起的证书激活
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Key.Activate '{"number":"${NUMBER}", "consumer":"223344", "space":"test"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Key.Activate '{"number":"${NUMBER}", "consumer":"223344", "space":"test"}'
 	# 恢复挂起的证书
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Key.Suspend '{"space":"test", "number":"${NUMBER}", "ban":0, "reason":"unknown"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Key.Suspend '{"space":"test", "number":"${NUMBER}", "ban":0, "reason":"unknown"}'
 	# 列举激活码
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Key.List '{"offset":0, "count":100, "space": "test"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Key.List '{"offset":0, "count":100, "space": "test"}'
 	# 拉取证书
-	MICRO_REGISTRY=consul micro call omo.api.msa.license Certificate.Pull '{"space":"test", "consumer":"223344"}'
+	MICRO_REGISTRY=etcd micro call xtc.ogm.license Certificate.Pull '{"space":"test", "consumer":"223344"}'
 
 .PHONY: tcall
 tcall:
@@ -89,4 +89,4 @@ dist:
 
 .PHONY: docker
 docker:
-	docker build . -t omo-msa-startkit:latest
+	docker build . -t xtc.ogm-startkit:latest

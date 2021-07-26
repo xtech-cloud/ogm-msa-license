@@ -17,7 +17,7 @@ type MySQL_ struct {
 }
 
 type Database_ struct {
-	Lite   bool    `yaml:lite`
+	Driver string  `yaml:driver`
 	MySQL  MySQL_  `yaml:mysql`
 	SQLite SQLite_ `yaml:sqlite`
 }

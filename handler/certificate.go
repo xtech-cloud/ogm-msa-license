@@ -3,9 +3,9 @@ package handler
 import (
 	"context"
 
-	"omo-msa-license/model"
+	"ogm-msa-license/model"
 
-	"github.com/micro/go-micro/v2/logger"
+	"github.com/asim/go-micro/v3/logger"
 
 	proto "github.com/xtech-cloud/omo-msp-license/proto/license"
 )
@@ -22,7 +22,7 @@ func (this *Certificate) Fetch(_ctx context.Context, _req *proto.CerFetchRequest
 		return nil
 	}
 
-	dao := model.NewCertificateDAO()
+	dao := model.NewCertificateDAO(nil)
 
 	cer, err := dao.Find(_req.Uid)
 	// 数据库错误
@@ -64,7 +64,7 @@ func (this *Certificate) Pull(_ctx context.Context, _req *proto.CerPullRequest, 
 		return nil
 	}
 
-	dao := model.NewCertificateDAO()
+	dao := model.NewCertificateDAO(nil)
 
 	cers, err := dao.Query(model.CertificateQuery{
 		Space:    _req.Space,
@@ -104,7 +104,7 @@ func (this *Certificate) List(_ctx context.Context, _req *proto.CerListRequest, 
 		return nil
 	}
 
-	dao := model.NewCertificateDAO()
+	dao := model.NewCertificateDAO(nil)
 
 	count, err := dao.Count(model.CertificateQuery{
 		Space: _req.Space,

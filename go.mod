@@ -1,18 +1,20 @@
-module omo-msa-license
+module ogm-msa-license
 
-go 1.13
+go 1.16
 
 require (
-	github.com/golang/protobuf v1.4.3
-	github.com/jinzhu/gorm v1.9.16
-	github.com/micro/go-micro/v2 v2.9.1
-	github.com/micro/go-plugins/config/source/consul/v2 v2.9.1
-	github.com/micro/go-plugins/logger/logrus/v2 v2.9.1
-	github.com/micro/go-plugins/registry/consul/v2 v2.9.1
-	github.com/micro/go-plugins/registry/etcdv3/v2 v2.9.1
+	github.com/asim/go-micro/plugins/config/encoder/yaml/v3 v3.0.0-20210721080634-e1bc7e302871
+	github.com/asim/go-micro/plugins/config/source/etcd/v3 v3.0.0-20210721080634-e1bc7e302871
+	github.com/asim/go-micro/plugins/logger/logrus/v3 v3.0.0-20210721080634-e1bc7e302871
+	github.com/asim/go-micro/plugins/registry/etcd/v3 v3.0.0-20210721080634-e1bc7e302871
+	github.com/asim/go-micro/v3 v3.5.2
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.8.1
-	github.com/xtech-cloud/omo-msp-account v1.13.0
-	github.com/xtech-cloud/omo-msp-license v1.2.0
-	gopkg.in/yaml.v2 v2.4.0
+	github.com/xtech-cloud/omo-msp-license v3.0.0+incompatible
+	golang.org/x/net v0.0.0-20210614182718-04defd469f4e // indirect
+	google.golang.org/genproto v0.0.0-20210721163202-f1cecdd8b78a // indirect
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	gorm.io/driver/mysql v1.1.1
+	gorm.io/driver/sqlite v1.1.4
+	gorm.io/gorm v1.21.12
 )

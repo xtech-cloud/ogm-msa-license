@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"omo-msa-license/crypto"
-	"omo-msa-license/model"
+	"ogm-msa-license/crypto"
+	"ogm-msa-license/model"
 
-	"github.com/micro/go-micro/v2/logger"
+	"github.com/asim/go-micro/v3/logger"
 	uuid "github.com/satori/go.uuid"
 
 	proto "github.com/xtech-cloud/omo-msp-license/proto/license"
@@ -47,8 +47,8 @@ func (this *Key) Generate(_ctx context.Context, _req *proto.KeyGenerateRequest, 
 		expiry = _req.Expiry
 	}
 
-	daoSpace := model.NewSpaceDAO()
-	daoKey := model.NewKeyDAO()
+	daoSpace := model.NewSpaceDAO(nil)
+	daoKey := model.NewKeyDAO(nil)
 
 	space, err := daoSpace.Find(_req.Space)
 	if nil != err {
@@ -96,7 +96,7 @@ func (this *Key) Query(_ctx context.Context, _req *proto.KeyQueryRequest, _rsp *
 		return nil
 	}
 
-	dao := model.NewKeyDAO()
+	dao := model.NewKeyDAO(nil)
 
 	key, err := dao.Find(_req.Number)
 	if nil != err {
@@ -125,7 +125,7 @@ func (this *Key) Query(_ctx context.Context, _req *proto.KeyQueryRequest, _rsp *
 		_rsp.Key.ActivatedAt = 0
 	}
 
-	daoCer := model.NewCertificateDAO()
+	daoCer := model.NewCertificateDAO(nil)
 	// 获取已激活的证书
 	cers, err := daoCer.Query(model.CertificateQuery{
 		Space:  key.Space,
@@ -151,7 +151,7 @@ func (this *Key) List(_ctx context.Context, _req *proto.KeyListRequest, _rsp *pr
 		return nil
 	}
 
-	dao := model.NewKeyDAO()
+	dao := model.NewKeyDAO(nil)
 
 	count, err := dao.Count(_req.Space)
 	// 数据库错误
@@ -165,7 +165,7 @@ func (this *Key) List(_ctx context.Context, _req *proto.KeyListRequest, _rsp *pr
 		return err
 	}
 
-	daoCer := model.NewCertificateDAO()
+	daoCer := model.NewCertificateDAO(nil)
 	_rsp.Total = count
 	_rsp.Key = make([]*proto.KeyEntity, len(keys))
 	for i, key := range keys {
@@ -223,7 +223,7 @@ func (this *Key) Activate(_ctx context.Context, _req *proto.KeyActivateRequest, 
 		return nil
 	}
 
-	daoSpace := model.NewSpaceDAO()
+	daoSpace := model.NewSpaceDAO(nil)
 	space, err := daoSpace.Find(_req.Space)
 	if nil != err {
 		return err
@@ -235,7 +235,7 @@ func (this *Key) Activate(_ctx context.Context, _req *proto.KeyActivateRequest, 
 		return nil
 	}
 
-	daoKey := model.NewKeyDAO()
+	daoKey := model.NewKeyDAO(nil)
 	key, err := daoKey.Find(_req.Number)
 	if nil != err {
 		return err
@@ -260,7 +260,7 @@ func (this *Key) Activate(_ctx context.Context, _req *proto.KeyActivateRequest, 
 
 	// 如果存在已激活的有效证书，则直接返回
 	uid := model.ToUUID(fmt.Sprintf("%s%s%s", space.Name, key.Number, _req.Consumer))
-	daoCer := model.NewCertificateDAO()
+	daoCer := model.NewCertificateDAO(nil)
 	certificate, err := daoCer.Find(uid)
 	if nil != err {
 		return nil
@@ -338,7 +338,7 @@ func (this *Key) Suspend(_ctx context.Context, _req *proto.KeySuspendRequest, _r
 		return nil
 	}
 
-	dao := model.NewKeyDAO()
+	dao := model.NewKeyDAO(nil)
 
 	key, err := dao.Find(_req.Number)
 	if nil != err {

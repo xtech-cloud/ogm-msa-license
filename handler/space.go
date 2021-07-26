@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"time"
 
-	"omo-msa-license/crypto"
-	"omo-msa-license/model"
+	"ogm-msa-license/crypto"
+	"ogm-msa-license/model"
 
-	"github.com/micro/go-micro/v2/logger"
+	"github.com/asim/go-micro/v3/logger"
 
 	proto "github.com/xtech-cloud/omo-msp-license/proto/license"
 )
@@ -27,7 +27,7 @@ func (this *Space) Create(_ctx context.Context, _req *proto.SpaceCreateRequest, 
 		return nil
 	}
 
-	dao := model.NewSpaceDAO()
+	dao := model.NewSpaceDAO(nil)
 
 	// 账号存在检测
 	exists, err := dao.Exists(_req.Name)
@@ -80,7 +80,7 @@ func (this *Space) Query(_ctx context.Context, _req *proto.SpaceQueryRequest, _r
 		return nil
 	}
 
-	dao := model.NewSpaceDAO()
+	dao := model.NewSpaceDAO(nil)
 
 	space, err := dao.Find(_req.Name)
 	// 数据库错误
@@ -112,7 +112,7 @@ func (this *Space) List(_ctx context.Context, _req *proto.SpaceListRequest, _rsp
 	logger.Infof("Received Space.List, request is %v", _req)
 	_rsp.Status = &proto.Status{}
 
-	dao := model.NewSpaceDAO()
+	dao := model.NewSpaceDAO(nil)
 
 	count, err := dao.Count()
 	// 数据库错误

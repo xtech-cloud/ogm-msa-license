@@ -1,7 +1,8 @@
 package model
 
 import (
-	"github.com/jinzhu/gorm"
+    "errors"
+	"gorm.io/gorm"
 )
 
 type Certificate struct {
@@ -14,7 +15,7 @@ type Certificate struct {
 }
 
 func (Certificate) TableName() string {
-	return "msa_license_certificate"
+	return "ogm_license_certificate"
 }
 
 type CertificateQuery struct {
@@ -24,44 +25,39 @@ type CertificateQuery struct {
 }
 
 type CertificateDAO struct {
+	conn *Conn
 }
 
-func NewCertificateDAO() *CertificateDAO {
-	return &CertificateDAO{}
-}
-
-func (CertificateDAO) Insert(_cer Certificate) error {
-	db, err := openSqlDB()
-	if nil != err {
-		return err
+func NewCertificateDAO(_conn *Conn) *CertificateDAO {
+	conn := DefaultConn
+	if nil != _conn {
+		conn = _conn
 	}
-	defer closeSqlDB(db)
+	return &CertificateDAO{
+		conn: conn,
+	}
+}
 
+func (this *CertificateDAO) Insert(_cer Certificate) error {
+    db := this.conn.DB
 	return db.Create(&_cer).Error
 }
 
-func (CertificateDAO) Find(_uid string) (Certificate, error) {
-	var cer Certificate
-	db, err := openSqlDB()
-	if nil != err {
-		return cer, err
-	}
-	defer closeSqlDB(db)
+func (this *CertificateDAO) Find(_uid string) (Certificate, error) {
+    db := this.conn.DB
 
+	var cer Certificate
 	res := db.Where("uid = ?", _uid).First(&cer)
-	if res.RecordNotFound() {
+    if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 		return Certificate{}, nil
 	}
-	return cer, err
+	return cer, res.Error
 }
 
-func (CertificateDAO) Query(_query CertificateQuery) ([]*Certificate, error) {
+func (this *CertificateDAO) Query(_query CertificateQuery) ([]*Certificate, error) {
+    db := this.conn.DB
+
 	var cers []*Certificate
-	db, err := openSqlDB()
-	if nil != err {
-		return nil, err
-	}
-	defer closeSqlDB(db)
 
 	db = db.Model(&Certificate{}).Order("created_at desc")
 	blankQuery := true
@@ -86,13 +82,10 @@ func (CertificateDAO) Query(_query CertificateQuery) ([]*Certificate, error) {
 	return cers, res.Error
 }
 
-func (CertificateDAO) Count(_query CertificateQuery) (int64, error) {
+func (this *CertificateDAO) Count(_query CertificateQuery) (int64, error) {
+    db := this.conn.DB
+
 	count := int64(0)
-	db, err := openSqlDB()
-	if nil != err {
-		return count, err
-	}
-	defer closeSqlDB(db)
 
 	db = db.Model(&Certificate{})
 
@@ -110,14 +103,10 @@ func (CertificateDAO) Count(_query CertificateQuery) (int64, error) {
 	return count, res.Error
 }
 
-func (CertificateDAO) List(_offset int32, _count int32, _space string) ([]Certificate, error) {
-	db, err := openSqlDB()
-	if nil != err {
-		return nil, err
-	}
-	defer closeSqlDB(db)
+func (this *CertificateDAO) List(_offset int32, _count int32, _space string) ([]Certificate, error) {
+    db := this.conn.DB
 
 	var cer []Certificate
-	res := db.Where("space = ?", _space).Offset(_offset).Limit(_count).Order("created_at desc").Find(&cer)
+	res := db.Where("space = ?", _space).Offset(int(_offset)).Limit(int(_count)).Order("created_at desc").Find(&cer)
 	return cer, res.Error
 }

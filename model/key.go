@@ -2,8 +2,9 @@ package model
 
 import (
 	"time"
+    "errors"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 type Key struct {
@@ -19,71 +20,56 @@ type Key struct {
 }
 
 func (Key) TableName() string {
-	return "msa_license_key"
+	return "ogm_license_key"
 }
 
 type KeyDAO struct {
+	conn *Conn
 }
 
-func NewKeyDAO() *KeyDAO {
-	return &KeyDAO{}
-}
-
-func (KeyDAO) Insert(_key Key) error {
-	db, err := openSqlDB()
-	if nil != err {
-		return err
+func NewKeyDAO(_conn *Conn) *KeyDAO {
+	conn := DefaultConn
+	if nil != _conn {
+		conn = _conn
 	}
-	defer closeSqlDB(db)
+	return &KeyDAO{
+        conn: conn,
+    }
+}
 
+func (this *KeyDAO) Insert(_key Key) error {
+    db := this.conn.DB
 	return db.Create(&_key).Error
 }
 
-func (KeyDAO) Count(_space string) (int64, error) {
+func (this *KeyDAO) Count(_space string) (int64, error) {
+    db := this.conn.DB
 	count := int64(0)
-	db, err := openSqlDB()
-	if nil != err {
-		return count, err
-	}
-	defer closeSqlDB(db)
 
 	res := db.Model(&Key{}).Where("space = ?", _space).Count(&count)
 	return count, res.Error
 }
 
-func (KeyDAO) Find(_number string) (Key, error) {
+func (this *KeyDAO) Find(_number string) (Key, error) {
+    db := this.conn.DB
 	var key Key
-	db, err := openSqlDB()
-	if nil != err {
-		return key, err
-	}
-	defer closeSqlDB(db)
 
 	res := db.Where("number = ?", _number).First(&key)
-	if res.RecordNotFound() {
+    if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 		return Key{}, nil
 	}
-	return key, err
+	return key, res.Error
 }
 
-func (KeyDAO) Save(_key *Key) error {
-	db, err := openSqlDB()
-	if nil != err {
-		return err
-	}
-	defer closeSqlDB(db)
-
+func (this *KeyDAO) Save(_key *Key) error {
+    db := this.conn.DB
 	return db.Save(_key).Error
 }
 
-func (KeyDAO) List(_offset int32, _count int32, _space string) ([]Key, error) {
-	db, err := openSqlDB()
-	if nil != err {
-		return nil, err
-	}
-	defer closeSqlDB(db)
+func (this *KeyDAO) List(_offset int32, _count int32, _space string) ([]Key, error) {
+    db := this.conn.DB
 
 	var key []Key
-	res := db.Where("space = ?", _space).Offset(_offset).Limit(_count).Order("created_at desc").Find(&key)
+	res := db.Where("space = ?", _space).Offset(int(_offset)).Limit(int(_count)).Order("created_at desc").Find(&key)
 	return key, res.Error
 }

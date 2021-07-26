@@ -1,7 +1,8 @@
 package model
 
 import (
-	"github.com/jinzhu/gorm"
+    "errors"
+	"gorm.io/gorm"
 )
 
 type Space struct {
@@ -15,7 +16,7 @@ type Space struct {
 }
 
 func (Space) TableName() string {
-	return "msa_license_space"
+	return "ogm_license_space"
 }
 
 type SpaceQuery struct {
@@ -25,88 +26,74 @@ type SpaceQuery struct {
 }
 
 type SpaceDAO struct {
+	conn *Conn
 }
 
-func NewSpaceDAO() *SpaceDAO {
-	return &SpaceDAO{}
-}
-
-func (SpaceDAO) Exists(_name string) (bool, error) {
-	db, err := openSqlDB()
-	if nil != err {
-		return false, err
+func NewSpaceDAO(_conn *Conn) *SpaceDAO {
+	conn := DefaultConn
+	if nil != _conn {
+		conn = _conn
 	}
-	defer closeSqlDB(db)
+	return &SpaceDAO{
+        conn: conn,
+    }
+}
+
+func (this *SpaceDAO) Exists(_name string) (bool, error) {
+    db := this.conn.DB
 
 	var space Space
 	result := db.Where("name = ?", _name).First(&space)
-	if result.RecordNotFound() {
+    if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return false, nil
 	}
 
 	return "" != space.Name, result.Error
 }
 
-func (SpaceDAO) Insert(_space Space) error {
-	db, err := openSqlDB()
-	if nil != err {
-		return err
-	}
-	defer closeSqlDB(db)
+func (this* SpaceDAO) Insert(_space Space) error {
+    db := this.conn.DB
 
 	return db.Create(&_space).Error
 }
 
-func (SpaceDAO) Find(_name string) (Space, error) {
+func (this* SpaceDAO) Find(_name string) (Space, error) {
+    db := this.conn.DB
+
 	var space Space
-	db, err := openSqlDB()
-	if nil != err {
-		return space, err
-	}
-	defer closeSqlDB(db)
 
 	res := db.Where("name = ?", _name).First(&space)
-	if res.RecordNotFound() {
+    if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 		return Space{}, nil
 	}
-	return space, err
+	return space, res.Error
 }
 
-func (SpaceDAO) Count() (int64, error) {
+func (this* SpaceDAO) Count() (int64, error) {
+    db := this.conn.DB
+
 	count := int64(0)
-	db, err := openSqlDB()
-	if nil != err {
-		return count, err
-	}
-	defer closeSqlDB(db)
 
 	res := db.Model(&Space{}).Count(&count)
 	return count, res.Error
 }
 
-func (SpaceDAO) Fetch(_key string, _secret string) (Space, error) {
+func (this* SpaceDAO) Fetch(_key string, _secret string) (Space, error) {
+    db := this.conn.DB
+
 	var space Space
-	db, err := openSqlDB()
-	if nil != err {
-		return space, err
-	}
-	defer closeSqlDB(db)
 
 	res := db.Where("space_key = ? AND space_secret = ?", _key, _secret).First(&space)
-	if res.RecordNotFound() {
+    if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 		return Space{}, nil
 	}
-	return space, err
+	return space, res.Error
 }
 
-func (SpaceDAO) List(_offset int32, _count int32) ([]Space, error) {
-	db, err := openSqlDB()
-	if nil != err {
-		return nil, err
-	}
-	defer closeSqlDB(db)
+func (this* SpaceDAO) List(_offset int32, _count int32) ([]Space, error) {
+    db := this.conn.DB
 
 	var space []Space
-	res := db.Offset(_offset).Limit(_count).Order("created_at desc").Find(&space)
+	res := db.Offset(int(_offset)).Limit(int(_count)).Order("created_at desc").Find(&space)
 	return space, res.Error
 }

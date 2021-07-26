@@ -2,26 +2,29 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"strings"
 
-	"github.com/micro/go-micro/v2/config"
-	"github.com/micro/go-micro/v2/config/encoder/yaml"
-	"github.com/micro/go-micro/v2/config/source"
-	"github.com/micro/go-micro/v2/config/source/etcd"
-	"github.com/micro/go-micro/v2/config/source/file"
-	"github.com/micro/go-micro/v2/config/source/memory"
-	"github.com/micro/go-micro/v2/logger"
-	"github.com/micro/go-plugins/config/source/consul/v2"
-	logrusPlugin "github.com/micro/go-plugins/logger/logrus/v2"
+	"github.com/asim/go-micro/plugins/config/encoder/yaml/v3"
+	"github.com/asim/go-micro/plugins/config/source/etcd/v3"
+	logrusPlugin "github.com/asim/go-micro/plugins/logger/logrus/v3"
+	"github.com/asim/go-micro/v3/config"
+	"github.com/asim/go-micro/v3/config/reader"
+	jsonReader "github.com/asim/go-micro/v3/config/reader/json"
+	"github.com/asim/go-micro/v3/config/source"
+	"github.com/asim/go-micro/v3/config/source/file"
+	"github.com/asim/go-micro/v3/config/source/memory"
+	"github.com/asim/go-micro/v3/logger"
 	"github.com/sirupsen/logrus"
-	goYAML "gopkg.in/yaml.v2"
+	goYAML "gopkg.in/yaml.v3"
 )
 
 type ConfigDefine struct {
-	Source  string   `json:source`
-	Prefix  string   `json:prefix`
-	Key     string   `json:key`
-	Address []string `json:address`
+	Source  string `json:source`
+	Prefix  string `json:prefix`
+	Key     string `json:key`
+	Address string
 }
 
 var configDefine ConfigDefine
@@ -32,15 +35,17 @@ func setupEnvironment() {
 	//registry plugin
 	registryPlugin := os.Getenv("MSA_REGISTRY_PLUGIN")
 	if "" == registryPlugin {
-		registryPlugin = "consul"
+		registryPlugin = "etcd"
 	}
+	logger.Infof("MSA_REGISTRY_PLUGIN is %v", registryPlugin)
 	os.Setenv("MICRO_REGISTRY", registryPlugin)
 
 	//registry address
 	registryAddress := os.Getenv("MSA_REGISTRY_ADDRESS")
 	if "" == registryAddress {
-		registryPlugin = "127.0.0.1:8500"
+		registryAddress = "localhost:2379"
 	}
+	logger.Infof("MSA_REGISTRY_ADDRESS is %v", registryAddress)
 	os.Setenv("MICRO_REGISTRY_ADDRESS", registryAddress)
 
 	//config
@@ -56,71 +61,66 @@ func setupEnvironment() {
 	if err != nil {
 		logger.Error(err)
 	}
+	configDefine.Address = registryAddress
 }
 
 func mergeFile(_config config.Config) {
-	filepath := configDefine.Prefix + configDefine.Key
+	prefix := configDefine.Prefix
+	if !strings.HasSuffix(prefix, "/") {
+		prefix = prefix + "/"
+	}
+	filepath := prefix + configDefine.Key
 	fileSource := file.NewSource(
 		file.WithPath(filepath),
 	)
 	err := _config.Load(fileSource)
 	if nil != err {
-		logger.Errorf("load config %v failed: %v", filepath, err)
-		panic("load config failed")
-	} else {
-		logger.Infof("load config %v success", filepath)
-		_config.Scan(&Schema)
+		panic(fmt.Sprintf("load config %v failed: %v", filepath, err))
 	}
-}
-
-func mergeConsul(_config config.Config) {
-	consulKey := configDefine.Prefix + configDefine.Key
-	success := false
-	for _, addr := range configDefine.Address {
-		consulSource := consul.NewSource(
-			consul.WithAddress(addr),
-			consul.WithPrefix(configDefine.Prefix),
-			consul.StripPrefix(true),
-			source.WithEncoder(yaml.NewEncoder()),
-		)
-		err := _config.Load(consulSource)
-		if nil == err {
-			logger.Infof("load config %v from %v success", consulKey, addr)
-			success = true
-			break
-		} else {
-			logger.Errorf("load config %v from %v failed: %v", consulKey, addr, err)
-		}
+	err = _config.Scan(&Schema)
+	if nil != err {
+		panic(fmt.Sprintf("scan config %v failed: %v", filepath, err))
 	}
-	if !success {
-		panic("load config failed")
-	}
-	_config.Get(configDefine.Key).Scan(&Schema)
+	logger.Infof("load config %v success", filepath)
 }
 
 func mergeEtcd(_config config.Config) {
-	etcdKey := configDefine.Prefix + configDefine.Key
-	success := false
-	for _, addr := range configDefine.Address {
-		etcdSource := etcd.NewSource(
-			etcd.WithAddress(addr),
-			etcd.WithPrefix(configDefine.Prefix),
-			etcd.StripPrefix(true),
-			source.WithEncoder(yaml.NewEncoder()),
-		)
-		err := _config.Load(etcdSource)
-		if nil == err {
-			logger.Infof("load config %v from %v success", etcdKey, addr)
-			success = true
-			break
-		} else {
-			logger.Errorf("load config %v from %v failed: %v", etcdKey, addr, err)
-		}
+	prefix := configDefine.Prefix
+	if !strings.HasSuffix(prefix, "/") {
+		prefix = prefix + "/"
 	}
-	if !success {
-		panic("load config failed")
+	etcdKey := prefix + configDefine.Key
+	etcdSource := etcd.NewSource(
+		source.WithEncoder(yaml.NewEncoder()),
+		etcd.WithAddress(configDefine.Address),
+		etcd.WithPrefix(etcdKey),
+		etcd.StripPrefix(true),
+	)
+	err := _config.Load(etcdSource)
+	if nil != err {
+		panic(fmt.Sprintf("load config %v from etcd failed: %v", etcdKey, err))
 	}
-	_config.Get(configDefine.Key).Scan(&Schema)
+	err = _config.Scan(&Schema)
+	if nil != err {
+		panic(fmt.Sprintf("load config %v from etcd failed: %v", etcdKey, err))
+	}
+	logger.Infof("load config %v from etcd success", etcdKey)
+}
+
+func mergeDefault(_config config.Config) {
+	memorySource := memory.NewSource(
+		memory.WithYAML([]byte(defaultYAML)),
+	)
+
+	err := _config.Load(memorySource)
+	if nil != err {
+		panic(fmt.Sprintf("load config default failed: %v", err))
+	}
+	err = _config.Scan(&Schema)
+	if nil != err {
+		panic(fmt.Sprintf("load config default failed: %v", err))
+	}
+	logger.Infof("load config default success")
 }
 
 func Setup() {
@@ -140,7 +140,7 @@ func Setup() {
 		logger.Info("- Micro Service Agent -> Setup")
 		logger.Info("-------------------------------------------------------------")
 		logger.Warn("Running in \"debug\" mode. Switch to \"release\" mode in production.")
-		logger.Warn("- using env:	export MSA_MODE=release")
+		logger.Warn("- using env:   export MSA_MODE=release")
 	} else {
 		logger.DefaultLogger = logrusPlugin.NewLogger(
 			logger.WithOutput(os.Stdout),
@@ -152,7 +152,9 @@ func Setup() {
 		logger.Info("-------------------------------------------------------------")
 	}
 
-	conf, err := config.NewConfig()
+	conf, err := config.NewConfig(
+		config.WithReader(jsonReader.NewReader(reader.WithEncoder(yaml.NewEncoder()))),
+	)
 	if nil != err {
 		panic(err)
 	}
@@ -161,19 +163,14 @@ func Setup() {
 
 	// load default config
 	logger.Tracef("default config is: \n\r%v", defaultYAML)
-	memorySource := memory.NewSource(
-		memory.WithYAML([]byte(defaultYAML)),
-	)
-	conf.Load(memorySource)
-	conf.Scan(&Schema)
 
 	// merge others
 	if "file" == configDefine.Source {
 		mergeFile(conf)
-	} else if "consul" == configDefine.Source {
-		mergeConsul(conf)
 	} else if "etcd" == configDefine.Source {
 		mergeEtcd(conf)
+	} else {
+		mergeDefault(conf)
 	}
 
 	ycd, err := goYAML.Marshal(&Schema)
@@ -191,7 +188,7 @@ func Setup() {
 
 	if "debug" == mode {
 		logger.Warn("Using \"MSA_DEBUG_LOG_LEVEL\" to switch log's level in \"debug\" mode.")
-		logger.Warn("- using env:	export MSA_DEBUG_LOG_LEVEL=debug")
+		logger.Warn("- using env:   export MSA_DEBUG_LOG_LEVEL=debug")
 		debugLogLevel := os.Getenv("MSA_DEBUG_LOG_LEVEL")
 		if "" == debugLogLevel {
 			debugLogLevel = "trace"

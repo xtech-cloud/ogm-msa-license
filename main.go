@@ -4,15 +4,15 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"io"
-	"omo-msa-license/config"
-	"omo-msa-license/handler"
-	"omo-msa-license/model"
+	"ogm-msa-license/config"
+	"ogm-msa-license/handler"
+	"ogm-msa-license/model"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/micro/go-micro/v2"
-	"github.com/micro/go-micro/v2/logger"
+	"github.com/asim/go-micro/v3"
+	"github.com/asim/go-micro/v3/logger"
 	proto "github.com/xtech-cloud/omo-msp-license/proto/license"
 )
 
@@ -54,6 +54,7 @@ func main() {
 	if err := service.Run(); err != nil {
 		logger.Error(err)
 	}
+    model.Cancel()
 }
 
 func md5hex(_file string) string {
