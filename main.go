@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/asim/go-micro/plugins/server/grpc/v3"
 	"github.com/asim/go-micro/v3"
 	"github.com/asim/go-micro/v3/logger"
 	proto "github.com/xtech-cloud/omo-msp-license/proto/license"
@@ -19,10 +20,12 @@ import (
 func main() {
 	config.Setup()
 	model.Setup()
+	defer model.Cancel()
 	model.AutoMigrateDatabase()
 
 	// New Service
 	service := micro.NewService(
+		micro.Server(grpc.NewServer()),
 		micro.Name(config.Schema.Service.Name),
 		micro.Version(BuildVersion),
 		micro.RegisterTTL(time.Second*time.Duration(config.Schema.Service.TTL)),
@@ -54,7 +57,6 @@ func main() {
 	if err := service.Run(); err != nil {
 		logger.Error(err)
 	}
-    model.Cancel()
 }
 
 func md5hex(_file string) string {
