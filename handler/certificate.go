@@ -7,7 +7,7 @@ import (
 
 	"github.com/asim/go-micro/v3/logger"
 
-	proto "github.com/xtech-cloud/omo-msp-license/proto/license"
+	proto "github.com/xtech-cloud/ogm-msp-license/proto/license"
 )
 
 type Certificate struct{}
