@@ -1,17 +1,19 @@
 package model
 
 import (
+	"time"
     "errors"
+
 	"gorm.io/gorm"
 )
 
 type Certificate struct {
-	GModel   gorm.Model `gorm:"embedded"`
-	UID      string     `gorm:"column:uid;type:char(32);unique;not null"`
-	Space    string     `gorm:"column:space;type:varchar(32);not null"`
-	Key      string     `gorm:"column:number;type:char(32);not null"`
-	Consumer string     `gorm:"column:consumer;type:varchar(128);not null"`
-	Content  string     `gorm:"column:content;type:TEXT;not null"`
+	UUID      string `gorm:"column:uuid;type:char(32);unique;not null;primaryKey"`
+	Space     string `gorm:"column:space;type:varchar(32);not null"`
+	Key       string `gorm:"column:number;type:char(32);not null"`
+	Consumer  string `gorm:"column:consumer;type:varchar(128);not null"`
+	Content   string `gorm:"column:content;type:TEXT;not null"`
+	CreatedAt time.Time
 }
 
 func (Certificate) TableName() string {
@@ -39,23 +41,23 @@ func NewCertificateDAO(_conn *Conn) *CertificateDAO {
 }
 
 func (this *CertificateDAO) Insert(_cer Certificate) error {
-    db := this.conn.DB
+	db := this.conn.DB
 	return db.Create(&_cer).Error
 }
 
-func (this *CertificateDAO) Find(_uid string) (Certificate, error) {
-    db := this.conn.DB
+func (this *CertificateDAO) Get(_uuid string) (*Certificate, error) {
+	db := this.conn.DB
 
 	var cer Certificate
-	res := db.Where("uid = ?", _uid).First(&cer)
-    if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-		return Certificate{}, nil
+	res := db.Where("uuid = ?", _uuid).First(&cer)
+	if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+		return nil, nil
 	}
-	return cer, res.Error
+	return &cer, res.Error
 }
 
 func (this *CertificateDAO) Query(_query CertificateQuery) ([]*Certificate, error) {
-    db := this.conn.DB
+	db := this.conn.DB
 
 	var cers []*Certificate
 
@@ -83,7 +85,7 @@ func (this *CertificateDAO) Query(_query CertificateQuery) ([]*Certificate, erro
 }
 
 func (this *CertificateDAO) Count(_query CertificateQuery) (int64, error) {
-    db := this.conn.DB
+	db := this.conn.DB
 
 	count := int64(0)
 
@@ -103,10 +105,34 @@ func (this *CertificateDAO) Count(_query CertificateQuery) (int64, error) {
 	return count, res.Error
 }
 
-func (this *CertificateDAO) List(_offset int32, _count int32, _space string) ([]Certificate, error) {
-    db := this.conn.DB
+func (this *CertificateDAO) List(_offset int64, _count int64, _space string) (int64, []*Certificate, error) {
+	db := this.conn.DB.Model(&Certificate{}).Where("`space` = ?", _space)
+	count := int64(0)
+	res := db.Count(&count)
+	if nil != res.Error {
+		return 0, nil, res.Error
+	}
 
-	var cer []Certificate
-	res := db.Where("space = ?", _space).Offset(int(_offset)).Limit(int(_count)).Order("created_at desc").Find(&cer)
-	return cer, res.Error
+	var cer []*Certificate
+	res = db.Offset(int(_offset)).Limit(int(_count)).Order("created_at desc").Find(&cer)
+	return count, cer, res.Error
+}
+
+func (this *CertificateDAO) Search(_offset int64, _count int64, _space string, _number string, _consumer string) (int64, []*Certificate, error) {
+	db := this.conn.DB.Model(&Certificate{}).Where("`space` = ?", _space)
+	if "" != _number {
+		db = db.Where("`number` LIKE ?", "%"+_number+"%")
+	}
+	if "" != _consumer {
+		db = db.Where("`consumer` LIKE ?", "%"+_consumer+"%")
+	}
+	count := int64(0)
+	res := db.Count(&count)
+	if nil != res.Error {
+		return 0, nil, res.Error
+	}
+
+	var cer []*Certificate
+	res = db.Offset(int(_offset)).Limit(int(_count)).Order("created_at desc").Find(&cer)
+	return count, cer, res.Error
 }

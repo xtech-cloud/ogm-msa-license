@@ -50,12 +50,8 @@ func (this *Key) Generate(_ctx context.Context, _req *proto.KeyGenerateRequest, 
 	daoSpace := model.NewSpaceDAO(nil)
 	daoKey := model.NewKeyDAO(nil)
 
-	space, err := daoSpace.Find(_req.Space)
-	if nil != err {
-		return err
-	}
-
-	if "" == space.Name {
+	space, err := daoSpace.Get(_req.Space)
+	if nil != err || nil == space {
 		_rsp.Status.Code = 2
 		_rsp.Status.Message = "space not found"
 		return nil
@@ -68,6 +64,7 @@ func (this *Key) Generate(_ctx context.Context, _req *proto.KeyGenerateRequest, 
 			continue
 		}
 		key := model.Key{
+			UUID:     model.ToUUID(number),
 			Number:   number,
 			Space:    space.Name,
 			Capacity: capacity,
@@ -86,61 +83,6 @@ func (this *Key) Generate(_ctx context.Context, _req *proto.KeyGenerateRequest, 
 	return nil
 }
 
-func (this *Key) Query(_ctx context.Context, _req *proto.KeyQueryRequest, _rsp *proto.KeyQueryResponse) error {
-	logger.Infof("Received Key.Query, request is %v", _req)
-	_rsp.Status = &proto.Status{}
-
-	if "" == _req.Number {
-		_rsp.Status.Code = 1
-		_rsp.Status.Message = "number is required"
-		return nil
-	}
-
-	dao := model.NewKeyDAO(nil)
-
-	key, err := dao.Find(_req.Number)
-	if nil != err {
-		return err
-	}
-
-	if "" == key.Number {
-		_rsp.Status.Code = 2
-		_rsp.Status.Message = "key not found"
-		return nil
-	}
-
-	_rsp.Key = &proto.KeyEntity{
-		Number:      key.Number,
-		Space:       key.Space,
-		Capacity:    key.Capacity,
-		Expiry:      key.Expiry,
-		Storage:     key.Storage,
-		Profile:     key.Profile,
-		Ban:         key.Ban,
-		CreatedAt:   key.GModel.CreatedAt.Unix(),
-		UpdatedAt:   key.GModel.UpdatedAt.Unix(),
-		ActivatedAt: key.ActivatedAt.Unix(),
-	}
-	if _rsp.Key.ActivatedAt < _rsp.Key.CreatedAt {
-		_rsp.Key.ActivatedAt = 0
-	}
-
-	daoCer := model.NewCertificateDAO(nil)
-	// 获取已激活的证书
-	cers, err := daoCer.Query(model.CertificateQuery{
-		Space:  key.Space,
-		Number: key.Number,
-	})
-	if nil != err {
-		return err
-	}
-	_rsp.Key.Consumer = make([]string, len(cers))
-	for i, key := range cers {
-		_rsp.Key.Consumer[i] = key.Consumer
-	}
-	return nil
-}
-
 func (this *Key) List(_ctx context.Context, _req *proto.KeyListRequest, _rsp *proto.KeyListResponse) error {
 	logger.Infof("Received Key.List, request is %v", _req)
 	_rsp.Status = &proto.Status{}
@@ -151,25 +93,30 @@ func (this *Key) List(_ctx context.Context, _req *proto.KeyListRequest, _rsp *pr
 		return nil
 	}
 
-	dao := model.NewKeyDAO(nil)
-
-	count, err := dao.Count(_req.Space)
-	// 数据库错误
-	if nil != err {
-		return err
+	offset := int64(0)
+	if _req.Offset > 0 {
+		offset = _req.Offset
+	}
+	count := int64(0)
+	if _req.Count > 0 {
+		count = _req.Count
 	}
 
-	keys, err := dao.List(_req.Offset, _req.Count, _req.Space)
-	// 数据库错误
+	dao := model.NewKeyDAO(nil)
+
+	total, keys, err := dao.List(offset, count, _req.Space)
 	if nil != err {
-		return err
+		_rsp.Status.Code = -1
+		_rsp.Status.Message = err.Error()
+		return nil
 	}
 
 	daoCer := model.NewCertificateDAO(nil)
-	_rsp.Total = count
+	_rsp.Total = total
 	_rsp.Key = make([]*proto.KeyEntity, len(keys))
 	for i, key := range keys {
 		_rsp.Key[i] = &proto.KeyEntity{
+			Uuid:        key.UUID,
 			Number:      key.Number,
 			Space:       key.Space,
 			Capacity:    key.Capacity,
@@ -177,8 +124,82 @@ func (this *Key) List(_ctx context.Context, _req *proto.KeyListRequest, _rsp *pr
 			Storage:     key.Storage,
 			Profile:     key.Profile,
 			Ban:         key.Ban,
-			CreatedAt:   key.GModel.CreatedAt.Unix(),
-			UpdatedAt:   key.GModel.UpdatedAt.Unix(),
+			Reason:      key.Reason,
+			CreatedAt:   key.CreatedAt.Unix(),
+			ActivatedAt: key.ActivatedAt.Unix(),
+		}
+		if _rsp.Key[i].ActivatedAt < _rsp.Key[i].CreatedAt {
+			_rsp.Key[i].ActivatedAt = 0
+		}
+		// 获取已激活的消费者
+		consumers, err := daoCer.Query(model.CertificateQuery{
+			Space:  key.Space,
+			Number: key.Number,
+		})
+		if nil != err {
+			continue
+		}
+		_rsp.Key[i].Consumer = make([]string, len(consumers))
+		for j, c := range consumers {
+			_rsp.Key[i].Consumer[j] = c.Consumer
+		}
+	}
+
+	return nil
+}
+
+func (this *Key) Search(_ctx context.Context, _req *proto.KeySearchRequest, _rsp *proto.KeyListResponse) error {
+	logger.Infof("Received Key.Search, request is %v", _req)
+	_rsp.Status = &proto.Status{}
+
+	if "" == _req.Space {
+		_rsp.Status.Code = 1
+		_rsp.Status.Message = "space is required"
+		return nil
+	}
+
+	offset := int64(0)
+	if _req.Offset > 0 {
+		offset = _req.Offset
+	}
+	count := int64(0)
+	if _req.Count > 0 {
+		count = _req.Count
+	}
+
+	dao := model.NewKeyDAO(nil)
+
+	capacity := int32(0)
+	if _req.Capacity > 0 {
+		capacity = _req.Capacity
+	}
+	expiry := int32(0)
+	if _req.Expiry > 0 {
+		expiry = _req.Expiry
+	}
+
+	total, keys, err := dao.Search(offset, count, _req.Space, _req.Number, capacity, expiry, _req.Storage, _req.Profile, _req.Ban)
+	if nil != err {
+		_rsp.Status.Code = -1
+		_rsp.Status.Message = err.Error()
+		return nil
+	}
+
+	daoCer := model.NewCertificateDAO(nil)
+	_rsp.Total = total
+	_rsp.Key = make([]*proto.KeyEntity, len(keys))
+	for i, key := range keys {
+		_rsp.Key[i] = &proto.KeyEntity{
+			Uuid:        key.UUID,
+			Number:      key.Number,
+			Space:       key.Space,
+			Capacity:    key.Capacity,
+			Expiry:      key.Expiry,
+			Storage:     key.Storage,
+			Profile:     key.Profile,
+			Ban:         key.Ban,
+			Reason:      key.Reason,
+			CreatedAt:   key.CreatedAt.Unix(),
 			ActivatedAt: key.ActivatedAt.Unix(),
 		}
 		if _rsp.Key[i].ActivatedAt < _rsp.Key[i].CreatedAt {
@@ -237,10 +258,7 @@ func (this *Key) Activate(_ctx context.Context, _req *proto.KeyActivateRequest, 
 
 	daoKey := model.NewKeyDAO(nil)
 	key, err := daoKey.Find(_req.Number)
-	if nil != err {
-		return err
-	}
-	if "" == key.Number {
+	if nil != err || nil == key {
 		_rsp.Status.Code = 3
 		_rsp.Status.Message = "key not found"
 		return nil
@@ -261,11 +279,13 @@ func (this *Key) Activate(_ctx context.Context, _req *proto.KeyActivateRequest, 
 	// 如果存在已激活的有效证书，则直接返回
 	uid := model.ToUUID(fmt.Sprintf("%s%s%s", space.Name, key.Number, _req.Consumer))
 	daoCer := model.NewCertificateDAO(nil)
-	certificate, err := daoCer.Find(uid)
+	certificate, err := daoCer.Get(uid)
 	if nil != err {
+		_rsp.Status.Code = -1
+		_rsp.Status.Message = err.Error()
 		return nil
 	}
-	if "" != certificate.UID {
+	if nil != certificate {
 		_rsp.CerContent = certificate.Content
 		return nil
 	}
@@ -293,7 +313,7 @@ func (this *Key) Activate(_ctx context.Context, _req *proto.KeyActivateRequest, 
 	}
 
 	newCer := model.Certificate{
-		UID:      uid,
+		UUID:     uid,
 		Space:    space.Name,
 		Consumer: _req.Consumer,
 		Key:      key.Number,
@@ -306,56 +326,95 @@ func (this *Key) Activate(_ctx context.Context, _req *proto.KeyActivateRequest, 
 		return err
 	}
 
-	if key.ActivatedAt.Unix() < key.GModel.CreatedAt.Unix() {
+	if key.ActivatedAt.Unix() < key.CreatedAt.Unix() {
 		key.ActivatedAt = time.Now()
 	}
-	daoKey.Save(&key)
+	daoKey.Save(key)
 
-	_rsp.CerUID = newCer.UID
+	_rsp.CerUID = newCer.UUID
 	_rsp.CerContent = newCer.Content
+	_rsp.Uuid = key.UUID
 	return nil
 }
 
-func (this *Key) Suspend(_ctx context.Context, _req *proto.KeySuspendRequest, _rsp *proto.BlankResponse) error {
-	logger.Infof("Received Key.Suspend, request is %v", _req)
+func (this *Key) Get(_ctx context.Context, _req *proto.KeyGetRequest, _rsp *proto.KeyGetResponse) error {
+	logger.Infof("Received Key.Get, request is %v", _req)
 	_rsp.Status = &proto.Status{}
 
-	if "" == _req.Space {
+	if "" == _req.Uuid {
 		_rsp.Status.Code = 1
-		_rsp.Status.Message = "space is required"
-		return nil
-	}
-
-	if "" == _req.Number {
-		_rsp.Status.Code = 1
-		_rsp.Status.Message = "number is required"
-		return nil
-	}
-
-	if "" == _req.Reason {
-		_rsp.Status.Code = 1
-		_rsp.Status.Message = "reason is required"
+		_rsp.Status.Message = "uuid is required"
 		return nil
 	}
 
 	dao := model.NewKeyDAO(nil)
 
-	key, err := dao.Find(_req.Number)
+	key, err := dao.Get(_req.Uuid)
 	if nil != err {
-		return err
+		_rsp.Status.Code = -1
+		_rsp.Status.Message = err.Error()
+		return nil
 	}
 
-	if "" == key.Number {
+	_rsp.Key = &proto.KeyEntity{
+		Uuid:        key.UUID,
+		Number:      key.Number,
+		Space:       key.Space,
+		Capacity:    key.Capacity,
+		Expiry:      key.Expiry,
+		Storage:     key.Storage,
+		Profile:     key.Profile,
+		Ban:         key.Ban,
+		Reason:      key.Reason,
+		CreatedAt:   key.CreatedAt.Unix(),
+		ActivatedAt: key.ActivatedAt.Unix(),
+	}
+
+	daoCer := model.NewCertificateDAO(nil)
+	// 获取已激活的消费者
+	consumers, err := daoCer.Query(model.CertificateQuery{
+		Space:  key.Space,
+		Number: key.Number,
+	})
+	if nil == err {
+		_rsp.Key.Consumer = make([]string, len(consumers))
+		for j, c := range consumers {
+			_rsp.Key.Consumer[j] = c.Consumer
+		}
+	}
+	return nil
+}
+
+func (this *Key) Update(_ctx context.Context, _req *proto.KeyUpdateRequest, _rsp *proto.UuidResponse) error {
+	logger.Infof("Received Key.Update, request is %v", _req)
+	_rsp.Status = &proto.Status{}
+
+	if "" == _req.Uuid {
+		_rsp.Status.Code = 1
+		_rsp.Status.Message = "uuid is required"
+		return nil
+	}
+
+	dao := model.NewKeyDAO(nil)
+
+	key, err := dao.Get(_req.Uuid)
+	if nil != err || nil == key {
 		_rsp.Status.Code = 2
 		_rsp.Status.Message = "key not found"
 		return nil
 	}
 
 	key.Ban = _req.Ban
-	err = dao.Save(&key)
+	key.Reason = _req.Reason
+	key.Profile = _req.Profile
+	err = dao.Save(key)
 	if nil != err {
+		_rsp.Status.Code = -1
+		_rsp.Status.Message = err.Error()
 		return nil
 	}
+
+	_rsp.Uuid = _req.Uuid
 	return nil
 }
 
